@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "Alan",
   "license": "MIT",
-  "description": "Bar button that opens a popup and plays a random video right inline. Configure one or more source URLs that already serve a different video on each request (a personal random-video endpoint, a redirect service, etc.) -- the plugin picks one at random, cache-busts the request, and plays it directly in the popup, with a reroll button for another pick and a one-click launch into mpv for its own window.",
+  "description": "Bar button that opens a popup and plays a random video right inline. Sources can be a URL that already serves a different video on each request, or a shell command whose output is such a URL (for sites like ytroulette.com where getting it takes real client-side logic). Either way the result is resolved with yt-dlp and played in the popup, with a reroll button for another pick and a one-click launch into mpv for its own window (with sound).",
   "kinds": [
     "bar-widget"
   ],
