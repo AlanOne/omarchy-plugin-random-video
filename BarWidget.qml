@@ -168,7 +168,16 @@ BarWidget {
 
   function startYtdlp(url) {
     root.currentBaseUrl = url
-    ytdlpProc.command = ["yt-dlp", "--no-warnings", "-f", "best/bv*", "-j", url]
+    // Forcing YouTube's android client instead of yt-dlp's default is a
+    // deliberate choice, not a random flag: it's both meaningfully faster
+    // (skips the slower default client(s), avoids failed-format retries)
+    // and, for most regular videos, still exposes the classic single-file
+    // muxed format (itag 18, audio+video together) that the default/web
+    // client no longer offers at all -- confirmed empirically on a video
+    // that had zero combined formats otherwise. Harmless no-op for any
+    // non-YouTube URL (yt-dlp ignores extractor-args for extractors that
+    // don't match).
+    ytdlpProc.command = ["yt-dlp", "--no-warnings", "--extractor-args", "youtube:player_client=android", "-f", "best/bv*", "-j", url]
     ytdlpProc.running = true
   }
 
@@ -227,8 +236,18 @@ BarWidget {
   }
 
   function openInMpv() {
-    if (root.currentBaseUrl === "") return
-    Quickshell.execDetached(["mpv", root.currentBaseUrl])
+    // Prefer the URL this plugin already resolved -- it's usually a real
+    // combined audio+video stream now (see startYtdlp's comment), and mpv
+    // can just play it directly with no further work. Only fall back to
+    // handing mpv the pre-resolution URL (letting its own, slower ytdl
+    // hook take a separate shot at it) when our own resolution came back
+    // silent -- redoing that same silent resolution again would be pure
+    // wasted latency for no benefit.
+    var target = (root.currentVideoUrl !== "" && !root.videoSilent)
+      ? root.currentVideoUrl
+      : root.currentBaseUrl
+    if (target === "") return
+    Quickshell.execDetached(["mpv", target])
   }
 
   BarIconButton {
