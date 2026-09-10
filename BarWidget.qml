@@ -482,7 +482,11 @@ BarWidget {
             // glyph like "▶", so both stay the same flat white style.
             text: player.playbackState === MediaPlayer.PlayingState ? "▮▮" : "▶"
             foreground: "white"
-            fontSize: Style.font.bodySmall
+            // "▮▮" renders noticeably smaller than "▶" at the same
+            // fontSize (different glyph proportions within the font) --
+            // scaled up ~1.4x here to visually match, confirmed via a
+            // side-by-side isolated render.
+            fontSize: player.playbackState === MediaPlayer.PlayingState ? Style.font.bodySmall * 1.4 : Style.font.bodySmall
             horizontalPadding: Style.space(6)
             verticalPadding: Style.space(2)
             onClicked: {
