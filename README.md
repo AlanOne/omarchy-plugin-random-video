@@ -1,7 +1,7 @@
 # Random Video (Omarchy plugin)
 
 A bar button that opens a popup and plays a random video right inline, with
-a "Reroll" button for another pick and a one-click "Open in mpv" for its own
+a "Reroll" button for another pick and a one-click "Open in window" for its own
 window (with sound — see below).
 
 ## What counts as a "source"
@@ -44,7 +44,7 @@ with sound.
 For the videos where even that doesn't yield a combined stream, a single
 inline video player still can't take two separate URLs, so **the inline
 preview plays silently** in that case (clearly labeled in the popup).
-Click **"Open in mpv"** for guaranteed audio+video either way — when this
+Click **"Open in window"** for guaranteed audio+video either way — when this
 plugin's own resolution already has audio, mpv just plays that same URL
 directly (instant); when it came back silent, mpv falls back to doing its
 own separate resolution via its `ytdl` hook.
@@ -73,7 +73,7 @@ omarchy plugin enable io.github.alanone.random-video
   real playable stream. If it's missing or fails on a given URL, the
   plugin falls back to treating that URL as already directly playable
   (the original behavior), rather than failing outright.
-- `mpv` for the "Open in mpv" button.
+- `mpv` for the "Open in window" button.
 - `bash` for Cmd sources (each one runs as `bash -c "<your command>"`).
 - Qt Multimedia's FFmpeg backend (`qt6-multimedia`, `qt6-multimedia-ffmpeg`
   on Arch/Omarchy) for inline playback — already part of a stock Omarchy
@@ -100,7 +100,7 @@ plugin sandboxes it in any way. It doesn't.
 
 - Config lives at `~/.local/share/omarchy-random-video/config.json` — just
   `{"sources": [{"type": "url"|"command", "value": "..."}, ...]}`.
-- "Open in mpv" always uses the pre-resolution URL (the configured URL, or
+- "Open in window" always uses the pre-resolution URL (the configured URL, or
   a Cmd source's own output) — not this plugin's yt-dlp-resolved stream —
   so mpv can do its own (better) extraction and audio+video muxing.
 - A resolver command or yt-dlp call that hangs gives up after 20 seconds

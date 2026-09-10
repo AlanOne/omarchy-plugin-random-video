@@ -38,7 +38,7 @@ BarWidget {
 
   property bool resolving: false
   // The URL as configured (or a resolver command's own stdout) -- what
-  // "Open in mpv" launches, letting mpv's own ytdl hook do the real
+  // "Open in window" launches, letting mpv's own ytdl hook do the real
   // audio+video handling rather than reusing whatever yt-dlp gave us here.
   property string currentBaseUrl: ""
   // What's actually fed to the inline Video element -- either the same
@@ -285,7 +285,7 @@ BarWidget {
         // Stop playback (and any in-flight resolution) the moment the
         // popup closes, rather than leaving it running silently in the
         // background -- reopening picks a fresh video, same as a first
-        // open. "Open in mpv" windows are untouched -- those are the
+        // open. "Open in window" windows are untouched -- those are the
         // user's own separate windows, not tied to this popup's lifetime.
         player.stop()
         resolverProc.running = false
@@ -361,7 +361,7 @@ BarWidget {
         visible: root.videoSilent && root.currentVideoUrl !== ""
         textFormat: Text.PlainText
         wrapMode: Text.WordWrap
-        text: "No audio in this preview — click \"Open in mpv\" for sound."
+        text: "No audio in this preview — click \"Open in window\" for sound."
         color: Qt.darker(root.bar.foreground, 1.4)
         font.family: root.bar.fontFamily
         font.pixelSize: Style.font.caption
@@ -403,7 +403,7 @@ BarWidget {
         }
 
         Button {
-          text: "Open in mpv"
+          text: "Open in window"
           foreground: root.bar.foreground
           horizontalPadding: Style.spacing.controlPaddingX
           verticalPadding: Style.spacing.controlPaddingY
