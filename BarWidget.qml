@@ -476,6 +476,10 @@ BarWidget {
           Button {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
+            // "▮▮" sits a little lower than "▶" at matching ink height
+            // (measured via pixel-level trim on a side-by-side render, not
+            // eyeballing) -- nudged up to compensate.
+            anchors.verticalCenterOffset: player.playbackState === MediaPlayer.PlayingState ? -2 : 0
             anchors.leftMargin: Style.space(4)
             // "⏸" (U+23F8) renders as a colored emoji (yellow rounded
             // square) in many fonts -- "▮▮" is a plain geometric-shapes
@@ -484,11 +488,12 @@ BarWidget {
             foreground: "white"
             // "▮▮" renders noticeably *larger* than "▶" at the same
             // fontSize in this shell's actual font (JetBrainsMono Nerd
-            // Font) -- scaled down ~0.65x here to visually match, measured
-            // via a side-by-side isolated render using that exact font
-            // (an earlier attempt measured this against the wrong default
-            // font and scaled the wrong direction).
-            fontSize: player.playbackState === MediaPlayer.PlayingState ? Style.font.bodySmall * 0.65 : Style.font.bodySmall
+            // Font) -- scaled down here to visually match. Measured
+            // precisely via pixel-level ink-bounds trimming on a
+            // side-by-side render using that exact font (both attempts
+            // before this one were eyeballed or used the wrong font, and
+            // were off in magnitude or direction).
+            fontSize: player.playbackState === MediaPlayer.PlayingState ? Style.font.bodySmall * 0.6 : Style.font.bodySmall
             horizontalPadding: Style.space(6)
             verticalPadding: Style.space(2)
             onClicked: {
