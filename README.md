@@ -31,14 +31,23 @@ a real stream URL.
 
 ## A real constraint worth knowing: YouTube's split streams
 
-Modern YouTube essentially never serves a single URL with both audio and
-video anymore — video and audio come back as two separate streams by
-design. A single inline video player can only take one URL, so **the
-inline popup preview for a YouTube-resolved source plays silently**
-(clearly labeled in the popup when this applies). Click **"Open in mpv"**
-for full audio+video — mpv does its own proper stream muxing via its
-`ytdl` hook, using the pre-resolution URL directly rather than whatever
-single (silent) stream this plugin resolved for the inline preview.
+Modern YouTube's default web client essentially never serves a single URL
+with both audio and video anymore — video and audio come back as two
+separate streams by design. This plugin resolves YouTube URLs via
+yt-dlp's android client instead (`--extractor-args
+"youtube:player_client=android"`), which is both noticeably faster (skips
+slower/failing client attempts) and, for most regular videos, still
+exposes the classic single muxed format (audio+video together) that the
+default client dropped — so most of the time, the inline preview plays
+with sound.
+
+For the videos where even that doesn't yield a combined stream, a single
+inline video player still can't take two separate URLs, so **the inline
+preview plays silently** in that case (clearly labeled in the popup).
+Click **"Open in mpv"** for guaranteed audio+video either way — when this
+plugin's own resolution already has audio, mpv just plays that same URL
+directly (instant); when it came back silent, mpv falls back to doing its
+own separate resolution via its `ytdl` hook.
 
 A source that's already a plain, directly-playable video file (the
 original design this plugin started with) is unaffected by any of this —
