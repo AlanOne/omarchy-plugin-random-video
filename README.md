@@ -126,8 +126,10 @@ yay -S mpv-uosc   # AUR; needs your sudo password interactively
 ```
 
 Arch's `mpv` reads user scripts from `~/.config/mpv/`, but this package
-installs to `/usr/share/mpv/` instead — symlink it in and add a small
-color override for the red accent:
+installs to `/usr/share/mpv/` instead — symlink it in and add a config
+for the red accent plus a pared-down control set (play/pause, volume, and
+the progress bar — uosc's own defaults include a lot more: track pickers,
+speed, shuffle/loop, prev/next, fullscreen):
 
 ```bash
 mkdir -p ~/.config/mpv/scripts ~/.config/mpv/fonts ~/.config/mpv/script-opts
@@ -137,6 +139,10 @@ ln -sf /usr/share/mpv/fonts/uosc_textures.ttf ~/.config/mpv/fonts/uosc_textures.
 cat > ~/.config/mpv/script-opts/uosc.conf <<'EOF'
 color=foreground=ff0000
 timeline_heatmap=overlay
+controls=play-pause
+controls_size=24
+volume=right
+volume_size=28
 EOF
 ```
 
