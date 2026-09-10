@@ -100,8 +100,16 @@ plugin sandboxes it in any way. It doesn't.
 
 - Config lives at `~/.local/share/omarchy-random-video/config.json` — just
   `{"sources": [{"type": "url"|"command", "value": "..."}, ...]}`.
-- "Open in window" always uses the pre-resolution URL (the configured URL, or
-  a Cmd source's own output) — not this plugin's yt-dlp-resolved stream —
-  so mpv can do its own (better) extraction and audio+video muxing.
+- Clicking "Open in window" closes the popup immediately (stopping the
+  inline preview) and opens mpv right away with a "Loading..." message,
+  rather than leaving you looking at a blank window while the stream
+  buffers. It uses this plugin's own already-resolved URL when that has
+  audio (the common case — see above), falling back to the pre-resolution
+  URL (letting mpv's own `ytdl` hook take a separate shot at it) only when
+  the resolution came back silent.
+- The mpv window opens with slightly larger on-screen controls than mpv's
+  own default (meant for a quick "watch this" session, not a full
+  media-player), and its title bar shows the actual video title when one's
+  known.
 - A resolver command or yt-dlp call that hangs gives up after 20 seconds
   rather than leaving "Resolving..." on screen forever.

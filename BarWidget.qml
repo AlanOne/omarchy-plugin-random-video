@@ -29,6 +29,17 @@ BarWidget {
   readonly property string dataDir: root.home + "/.local/share/omarchy-random-video"
   readonly property string configPath: root.dataDir + "/config.json"
 
+  // This widget's own directory, resolved from the QML file's own URL
+  // rather than assuming the canonical ~/.config/omarchy/plugins/... path
+  // (see the MWB Bridge plugin's identical pattern) -- used to find the
+  // bundled mpv/loading-osd.lua script regardless of where this got
+  // checked out.
+  readonly property string pluginDir: {
+    var url = Qt.resolvedUrl(".").toString()
+    if (url.indexOf("file://") === 0) url = url.substring("file://".length)
+    return url.replace(/\/+$/, "")
+  }
+
   readonly property real popupWidth: Math.max(200, Number(root.setting("popupWidth", 360)) || 360)
   readonly property real videoHeight: Math.max(80, Number(root.setting("videoHeight", 220)) || 220)
 
@@ -247,7 +258,30 @@ BarWidget {
       ? root.currentVideoUrl
       : root.currentBaseUrl
     if (target === "") return
-    Quickshell.execDetached(["mpv", target])
+    var title = root.videoTitle
+
+    // Close (and let the popup's own onOpenChanged stop the inline preview
+    // and cancel any in-flight resolution) before reading anything else off
+    // root -- both title and target are already captured above.
+    root.popupOpen = false
+
+    var args = [
+      "mpv",
+      // Opens the window immediately instead of waiting for a decoded
+      // frame -- otherwise a freshly-resolved stream can leave the user
+      // staring at nothing for a few seconds with no feedback at all.
+      "--force-window=immediate",
+      // Shows "Loading..." on that blank window right away, clearing once
+      // real playback actually starts (see mpv/loading-osd.lua).
+      "--script=" + root.pluginDir + "/mpv/loading-osd.lua",
+      // A bit bigger than mpv's own default OSC -- more comfortable to
+      // read/click for what's meant to be a quick "watch this" window,
+      // not a full media-player session.
+      "--script-opts=osc-scalewindowed=1.4,osc-scalefullscreen=1.3"
+    ]
+    if (title !== "") args.push("--force-media-title=" + title)
+    args.push(target)
+    Quickshell.execDetached(args)
   }
 
   BarIconButton {
