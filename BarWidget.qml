@@ -48,6 +48,17 @@ BarWidget {
   property var sources: []
 
   property bool resolving: false
+  // Bumped on every reroll() call and every time resolution is abandoned
+  // (popup closed, timed out) -- lets a resolver/yt-dlp response that
+  // arrives after its own request was abandoned recognize itself as stale
+  // and get ignored, rather than overwriting state a newer (or no) request
+  // set up in the meantime. Killing a Process via `.running = false`
+  // doesn't stop its StdioCollector's onStreamFinished from firing with
+  // whatever partial output it already captured -- without this check,
+  // closing the popup mid-resolution and reopening it could show a leftover
+  // "no output"/error from the abandoned request instead of the fresh one.
+  property int rerollGeneration: 0
+  property int pendingGeneration: -1
   // The URL as configured (or a resolver command's own stdout) -- what
   // "Open in window" launches, letting mpv's own ytdl hook do the real
   // audio+video handling rather than reusing whatever yt-dlp gave us here.
@@ -145,6 +156,14 @@ BarWidget {
     return url + sep + "_rv=" + Date.now() + "-" + Math.floor(Math.random() * 1000000)
   }
 
+  function formatTime(ms) {
+    if (!ms || ms <= 0) return "0:00"
+    var totalSeconds = Math.floor(ms / 1000)
+    var m = Math.floor(totalSeconds / 60)
+    var s = totalSeconds % 60
+    return m + ":" + (s < 10 ? "0" : "") + s
+  }
+
   function reroll() {
     if (root.resolving) return
     var valid = root.validSources()
@@ -157,6 +176,8 @@ BarWidget {
 
     var pick = valid[Math.floor(Math.random() * valid.length)]
     root.resolving = true
+    root.rerollGeneration++
+    root.pendingGeneration = root.rerollGeneration
     resolveTimeoutTimer.restart()
     if (pick.type === "command") {
       resolverProc.command = ["bash", "-c", pick.value]
@@ -167,6 +188,7 @@ BarWidget {
   }
 
   function onResolverOutput(out) {
+    if (root.pendingGeneration !== root.rerollGeneration) return
     var rawUrl = String(out || "").trim()
     if (rawUrl === "") {
       resolveTimeoutTimer.stop()
@@ -193,6 +215,7 @@ BarWidget {
   }
 
   function onYtdlpResolved(jsonText) {
+    if (root.pendingGeneration !== root.rerollGeneration) return
     resolveTimeoutTimer.stop()
     root.resolving = false
     var resolvedUrl = ""
@@ -226,6 +249,7 @@ BarWidget {
       resolverProc.running = false
       ytdlpProc.running = false
       root.resolving = false
+      root.rerollGeneration++
       root.playerError = "Timed out resolving this source."
     }
   }
@@ -326,6 +350,7 @@ BarWidget {
         ytdlpProc.running = false
         resolveTimeoutTimer.stop()
         root.resolving = false
+        root.rerollGeneration++
         root.currentVideoUrl = ""
         root.currentBaseUrl = ""
         root.videoTitle = ""
@@ -386,6 +411,43 @@ BarWidget {
           source: root.currentVideoUrl
           onErrorOccurred: function(error, errorString) {
             root.playerError = errorString || "Playback error"
+          }
+        }
+
+        // Minimal overlay strip -- just enough to pause/resume the preview
+        // and see how long it is, not a full player UI (that's what "Open
+        // in window" is for).
+        Rectangle {
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.bottom: parent.bottom
+          height: Style.space(28)
+          color: Qt.rgba(0, 0, 0, 0.55)
+
+          Button {
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: Style.space(4)
+            text: player.playbackState === MediaPlayer.PlayingState ? "⏸" : "▶"
+            foreground: "white"
+            fontSize: Style.font.bodySmall
+            horizontalPadding: Style.space(6)
+            verticalPadding: Style.space(2)
+            onClicked: {
+              if (player.playbackState === MediaPlayer.PlayingState) player.pause()
+              else player.play()
+            }
+          }
+
+          Text {
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.rightMargin: Style.space(8)
+            textFormat: Text.PlainText
+            text: root.formatTime(player.position) + " / " + root.formatTime(player.duration)
+            color: "white"
+            font.family: root.bar.fontFamily
+            font.pixelSize: Style.font.caption
           }
         }
       }
