@@ -59,6 +59,20 @@ BarWidget {
   // "no output"/error from the abandoned request instead of the fresh one.
   property int rerollGeneration: 0
   property int pendingGeneration: -1
+  // Which kind of source the in-flight (or most recently resolved) request
+  // came from -- onYtdlpResolved needs this to know whether falling back to
+  // playing currentBaseUrl verbatim (when yt-dlp itself fails) makes any
+  // sense at all: fine for a "url" source that might already be a direct
+  // video file, nonsensical for a "command" source, whose output is
+  // virtually always a page/id reference that needs yt-dlp, never a
+  // directly-playable file.
+  property string pendingSourceType: "url"
+  // How many *automatic* retries (a failed resolution or a playback error
+  // silently trying another random source instead of giving up) have
+  // happened since the last manual reroll() call. Capped so a source that's
+  // reliably broken (or a fully offline network) can't retry forever.
+  property int autoRetryCount: 0
+  readonly property int maxAutoRetries: 3
   // The URL as configured (or a resolver command's own stdout) -- what
   // "Open in window" launches, letting mpv's own ytdl hook do the real
   // audio+video handling rather than reusing whatever yt-dlp gave us here.
@@ -164,7 +178,14 @@ BarWidget {
     return m + ":" + (s < 10 ? "0" : "") + s
   }
 
+  // Public entry point -- a real user-initiated attempt (Reroll button, or
+  // the popup's own first-open), so it resets the auto-retry budget.
   function reroll() {
+    root.autoRetryCount = 0
+    root.attemptReroll()
+  }
+
+  function attemptReroll() {
     if (root.resolving) return
     var valid = root.validSources()
     root.playerError = ""
@@ -175,6 +196,7 @@ BarWidget {
     if (valid.length === 0) return
 
     var pick = valid[Math.floor(Math.random() * valid.length)]
+    root.pendingSourceType = pick.type
     root.resolving = true
     root.rerollGeneration++
     root.pendingGeneration = root.rerollGeneration
@@ -187,13 +209,27 @@ BarWidget {
     }
   }
 
+  // A source that failed to resolve or actually play is far more likely to
+  // just be a bad pick (dead link, a resolver hiccup, yt-dlp choking on
+  // this one video) than the whole feature being broken -- silently trying
+  // another random source reads much better than dumping an error on
+  // screen, as long as it can't retry forever.
+  function handleFailure(message) {
+    if (root.autoRetryCount < root.maxAutoRetries) {
+      root.autoRetryCount++
+      root.attemptReroll()
+    } else {
+      root.playerError = message
+    }
+  }
+
   function onResolverOutput(out) {
     if (root.pendingGeneration !== root.rerollGeneration) return
     var rawUrl = String(out || "").trim()
     if (rawUrl === "") {
       resolveTimeoutTimer.stop()
       root.resolving = false
-      root.playerError = "Resolver command produced no output."
+      root.handleFailure("Resolver command produced no output.")
       return
     }
     root.startYtdlp(rawUrl)
@@ -230,9 +266,18 @@ BarWidget {
       }
     } catch (e) {
       // Not resolvable via yt-dlp (unsupported URL, network hiccup, yt-dlp
-      // missing, etc.) -- fall back to treating the base URL as already a
-      // directly-playable video, the original behavior this plugin started
-      // with.
+      // missing, etc.). For a "url" source, currentBaseUrl might already be
+      // a directly-playable video file -- worth trying verbatim, the
+      // original behavior this plugin started with. For a "command"
+      // source, currentBaseUrl is virtually always a page/id reference a
+      // resolver script produced (e.g. a youtube.com/watch?v=... URL) --
+      // never something a video player can open directly -- so treat it as
+      // a real failure instead of feeding that straight to the player
+      // (confirmed live: that produced a bare "Could not open file").
+    }
+    if (resolvedUrl === "" && root.pendingSourceType === "command") {
+      root.handleFailure("Couldn't resolve a playable video from this source.")
+      return
     }
     root.videoSilent = silent
     root.videoTitle = title
@@ -250,7 +295,7 @@ BarWidget {
       ytdlpProc.running = false
       root.resolving = false
       root.rerollGeneration++
-      root.playerError = "Timed out resolving this source."
+      root.handleFailure("Timed out resolving this source.")
     }
   }
 
@@ -410,7 +455,11 @@ BarWidget {
           fillMode: VideoOutput.PreserveAspectFit
           source: root.currentVideoUrl
           onErrorOccurred: function(error, errorString) {
-            root.playerError = errorString || "Playback error"
+            // Also fires when `source` gets cleared out from under it (e.g.
+            // on popup close) -- only treat it as a real failure worth
+            // retrying when we were actually expecting something to play.
+            if (root.currentVideoUrl === "") return
+            root.handleFailure(errorString || "Playback error")
           }
         }
 
