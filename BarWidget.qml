@@ -258,8 +258,26 @@ BarWidget {
     contentHeight: popup.fittedContentHeight(column.implicitHeight)
 
     onOpenChanged: {
-      if (open && root.currentVideoUrl === "" && !root.resolving && root.validSources().length > 0) {
-        root.reroll()
+      if (open) {
+        if (root.currentVideoUrl === "" && !root.resolving && root.validSources().length > 0) {
+          root.reroll()
+        }
+      } else {
+        // Stop playback (and any in-flight resolution) the moment the
+        // popup closes, rather than leaving it running silently in the
+        // background -- reopening picks a fresh video, same as a first
+        // open. "Open in mpv" windows are untouched -- those are the
+        // user's own separate windows, not tied to this popup's lifetime.
+        player.stop()
+        resolverProc.running = false
+        ytdlpProc.running = false
+        resolveTimeoutTimer.stop()
+        root.resolving = false
+        root.currentVideoUrl = ""
+        root.currentBaseUrl = ""
+        root.videoTitle = ""
+        root.videoSilent = false
+        root.playerError = ""
       }
     }
 
