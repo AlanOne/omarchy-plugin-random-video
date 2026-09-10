@@ -428,7 +428,10 @@ BarWidget {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             anchors.leftMargin: Style.space(4)
-            text: player.playbackState === MediaPlayer.PlayingState ? "⏸" : "▶"
+            // "⏸" (U+23F8) renders as a colored emoji (yellow rounded
+            // square) in many fonts -- "▮▮" is a plain geometric-shapes
+            // glyph like "▶", so both stay the same flat white style.
+            text: player.playbackState === MediaPlayer.PlayingState ? "▮▮" : "▶"
             foreground: "white"
             fontSize: Style.font.bodySmall
             horizontalPadding: Style.space(6)
