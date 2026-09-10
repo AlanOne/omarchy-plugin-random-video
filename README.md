@@ -111,5 +111,37 @@ plugin sandboxes it in any way. It doesn't.
   own default (meant for a quick "watch this" session, not a full
   media-player), and its title bar shows the actual video title when one's
   known.
+
+## Optional: nicer, YouTube-style playback controls
+
+This plugin doesn't bundle or require it, but if you'd like the "Open in
+window" mpv session to actually look like a modern streaming-site player
+(red accent, a played-progress heatmap bar) instead of mpv's plain
+built-in controls, install the community **uosc** script — mpv picks it
+up automatically for every mpv window on the system (not just this
+plugin's), so it's a one-time setup, not a per-plugin thing:
+
+```bash
+yay -S mpv-uosc   # AUR; needs your sudo password interactively
+```
+
+Arch's `mpv` reads user scripts from `~/.config/mpv/`, but this package
+installs to `/usr/share/mpv/` instead — symlink it in and add a small
+color override for the red accent:
+
+```bash
+mkdir -p ~/.config/mpv/scripts ~/.config/mpv/fonts ~/.config/mpv/script-opts
+ln -sf /usr/share/mpv/scripts/uosc ~/.config/mpv/scripts/uosc
+ln -sf /usr/share/mpv/fonts/uosc_icons.otf ~/.config/mpv/fonts/uosc_icons.otf
+ln -sf /usr/share/mpv/fonts/uosc_textures.ttf ~/.config/mpv/fonts/uosc_textures.ttf
+cat > ~/.config/mpv/script-opts/uosc.conf <<'EOF'
+color=foreground=ff0000
+timeline_heatmap=overlay
+EOF
+```
+
+uosc automatically disables mpv's own built-in controls once loaded, so
+there's no conflict — every mpv window (this plugin's included) just
+looks nicer from then on.
 - A resolver command or yt-dlp call that hangs gives up after 20 seconds
   rather than leaving "Resolving..." on screen forever.
