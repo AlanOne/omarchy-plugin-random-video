@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.alanone.random-video",
+  "name": "Random Video",
+  "version": "1.0.0",
+  "author": "Alan",
+  "license": "MIT",
+  "description": "Bar button that opens a popup and plays a random video right inline. Configure one or more source URLs that already serve a different video on each request (a personal random-video endpoint, a redirect service, etc.) -- the plugin picks one at random, cache-busts the request, and plays it directly in the popup, with a reroll button for another pick and a one-click launch into mpv for its own window.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Random Video",
+    "description": "Random video popup player",
+    "category": "Media",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "popupWidth": 360,
+      "videoHeight": 220
+    },
+    "schema": [
+      {
+        "key": "popupWidth",
+        "type": "number",
+        "label": "Popup width (pixels, before theme spacing scale)",
+        "defaultValue": 360
+      },
+      {
+        "key": "videoHeight",
+        "type": "number",
+        "label": "Inline video player height (pixels)",
+        "defaultValue": 220
+      }
+    ]
+  }
+}
