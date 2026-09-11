@@ -23,6 +23,18 @@ Each configured source is one of two kinds:
   use it, or use it as a template for another site that needs the same
   treatment.
 
+  A Cmd resolver can optionally print up to two more lines after the URL: a
+  real title on the second line, and the real video *page* URL (as opposed
+  to the raw stream URL used for playback) on the third. Both are worth
+  supplying whenever the resolver's URL isn't itself a page yt-dlp
+  recognizes — for a raw stream URL like that, yt-dlp can't tell you the
+  real title (it just derives something from the URL, not meaningful), and
+  there's no real page to link to at all otherwise. When supplied, the
+  popup's title becomes a clickable link straight to that page; when not
+  (as with `ytroulette.sh`, which only ever prints the URL), it falls back
+  to linking the title to that same URL — already the real page in that
+  case, since it's a plain `youtube.com/watch?v=...` link.
+
 Either way, on each reroll the plugin picks one configured source at random,
 runs it if it's a command, then resolves the resulting URL with `yt-dlp`
 before playing it — a plain already-playable URL round-trips through
@@ -100,6 +112,8 @@ plugin sandboxes it in any way. It doesn't.
 
 - Config lives at `~/.local/share/omarchy-random-video/config.json` — just
   `{"sources": [{"type": "url"|"command", "value": "..."}, ...]}`.
+- The video title shown in the popup is a clickable link to the actual
+  video page (see the Cmd-resolver title/page-URL convention above).
 - Clicking "Open in window" closes the popup immediately (stopping the
   inline preview) and opens mpv right away with a "Loading..." message,
   rather than leaving you looking at a blank window while the stream
