@@ -67,6 +67,25 @@ BarWidget {
   // virtually always a page/id reference that needs yt-dlp, never a
   // directly-playable file.
   property string pendingSourceType: "url"
+  // A Cmd resolver may optionally print a real title as a second output
+  // line (after the URL on the first). Worth having: yt-dlp's own title for
+  // a raw HLS/generic stream URL (as opposed to a page it can identify,
+  // like a YouTube link) is just whatever it derives from the URL itself --
+  // e.g. "master" for a "master.m3u8" URL -- not the actual video's title.
+  property string pendingResolverTitle: ""
+  // A Cmd resolver may optionally print the real video *page* URL (as
+  // opposed to the raw stream URL it resolves for playback) as a third
+  // output line -- see videoPageUrl below for how this and currentBaseUrl
+  // combine into what the title actually links to.
+  property string pendingResolverPageUrl: ""
+  // What the video title links out to, set alongside videoTitle once
+  // resolved. A resolver-supplied page URL wins when there is one (needed
+  // for a site like pmvhaven, whose resolved stream URL is a raw
+  // master.m3u8 with no page of its own); otherwise currentBaseUrl already
+  // *is* the real video page for a plain "url" source, or for a Cmd
+  // resolver (like ytroulette.sh) that prints a page URL (e.g. a YouTube
+  // watch link) as its only output line.
+  property string videoPageUrl: ""
   // How many *automatic* retries (a failed resolution or a playback error
   // silently trying another random source instead of giving up) have
   // happened since the last manual reroll() call. Capped so a source that's
@@ -178,6 +197,18 @@ BarWidget {
     return m + ":" + (s < 10 ? "0" : "") + s
   }
 
+  // The title Text below renders as Text.StyledText (HTML) whenever it's a
+  // link, so a title containing "&"/"<"/etc. (real video titles do) needs
+  // escaping first -- otherwise it'd be parsed as markup instead of shown
+  // literally, or could break the <a> tag itself.
+  function escapeHtml(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+  }
+
   // Public entry point -- a real user-initiated attempt (Reroll button, or
   // the popup's own first-open), so it resets the auto-retry budget.
   function reroll() {
@@ -193,6 +224,9 @@ BarWidget {
     root.videoSilent = false
     root.currentBaseUrl = ""
     root.currentVideoUrl = ""
+    root.pendingResolverTitle = ""
+    root.pendingResolverPageUrl = ""
+    root.videoPageUrl = ""
     if (valid.length === 0) return
 
     var pick = valid[Math.floor(Math.random() * valid.length)]
@@ -225,7 +259,14 @@ BarWidget {
 
   function onResolverOutput(out) {
     if (root.pendingGeneration !== root.rerollGeneration) return
-    var rawUrl = String(out || "").trim()
+    // Convention: URL on the first non-empty line, an optional real title
+    // on the second, an optional real page URL on the third -- see
+    // pendingResolverTitle/pendingResolverPageUrl. ytroulette.sh only ever
+    // prints the URL, so this is a no-op for it.
+    var lines = String(out || "").split("\n").map(function(l) { return l.trim() }).filter(function(l) { return l !== "" })
+    var rawUrl = lines.length > 0 ? lines[0] : ""
+    root.pendingResolverTitle = lines.length > 1 ? lines[1] : ""
+    root.pendingResolverPageUrl = lines.length > 2 ? lines[2] : ""
     if (rawUrl === "") {
       resolveTimeoutTimer.stop()
       root.resolving = false
@@ -280,7 +321,14 @@ BarWidget {
       return
     }
     root.videoSilent = silent
-    root.videoTitle = title
+    // A resolver-supplied title (see pendingResolverTitle) is the real
+    // video title straight from that site's own API -- always preferred
+    // over yt-dlp's own title, which for a raw stream URL yt-dlp can't
+    // identify (a generic HLS/HTTP URL rather than a page it recognizes) is
+    // just derived from the URL itself and not meaningful (e.g. "master"
+    // for a ".../master.m3u8" URL).
+    root.videoTitle = root.pendingResolverTitle !== "" ? root.pendingResolverTitle : title
+    root.videoPageUrl = root.pendingResolverPageUrl !== "" ? root.pendingResolverPageUrl : root.currentBaseUrl
     root.currentVideoUrl = resolvedUrl !== "" ? resolvedUrl : root.cacheBust(root.currentBaseUrl)
   }
 
@@ -399,6 +447,7 @@ BarWidget {
         root.currentVideoUrl = ""
         root.currentBaseUrl = ""
         root.videoTitle = ""
+        root.videoPageUrl = ""
         root.videoSilent = false
         root.playerError = ""
       }
@@ -431,14 +480,22 @@ BarWidget {
       Text {
         width: parent.width
         visible: !root.resolving && root.videoTitle !== ""
-        textFormat: Text.PlainText
+        textFormat: root.videoPageUrl !== "" ? Text.StyledText : Text.PlainText
         wrapMode: Text.WordWrap
         elide: Text.ElideRight
         maximumLineCount: 2
-        text: root.videoTitle
+        text: root.videoPageUrl !== ""
+          ? "<a href=\"" + root.videoPageUrl + "\">" + root.escapeHtml(root.videoTitle) + "</a>"
+          : root.videoTitle
         color: root.bar.foreground
+        linkColor: root.bar.foreground
         font.family: root.bar.fontFamily
         font.pixelSize: Style.font.bodySmall
+        onLinkActivated: function(link) { Qt.openUrlExternally(link) }
+
+        HoverHandler {
+          cursorShape: parent.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor
+        }
       }
 
       Rectangle {
